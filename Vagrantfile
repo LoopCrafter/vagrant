@@ -59,7 +59,7 @@ Vagrant.configure("2") do |config|
   #
   config.vm.provider "vmware_desktop" do |v|
     v.ssh_info_public = true
-    v.gui = false
+    v.gui = true
     v.linked_clone = false
     v.vmx["ethernet0.virtualdev"] = "vmxnet3"
   end 
@@ -70,18 +70,28 @@ Vagrant.configure("2") do |config|
   # Enable provisioning with a shell script. Additional provisioners such as
   # Ansible, Chef, Docker, Puppet and Salt are also available. Please see the
   # documentation for more information about their specific syntax and use.
-  config.vm.provision "file", source: "monitor_logins.sh", destination: "/home/vagrant/monitor_logins.sh"
-  config.vm.provision "shell", inline: <<-SHELL
-  echo "*/5 * * * * /home/vagrant/monitor_logins.sh" | crontab -
-  service cron start
-  SHELL
+ 
+  config.vm.provision "file", source: "./monitor_logins.sh", destination: "/home/vagrant/monitor_logins.sh"
+  config.vm.provision "file", source: "./monitor_disk.sh", destination: "/home/vagrant/monitor_disk.sh"
+  config.vm.provision "file", source: "./monitor_services.sh", destination: "/home/vagrant/monitor_services.sh"
 
-  config.vm.provision "file", source: "monitor_disk.sh", destination: "/home/vagrant/monitor_disk.sh"
+  # Provisioning to set up scripts and cron jobs
   config.vm.provision "shell", inline: <<-SHELL
-    echo "*/5 * * * * /home/vagrant/monitor_disk.sh" | crontab -
-    service cron start
-  SHELL
+    # Set execute permissions for all scripts
+    sudo chmod +x /home/vagrant/monitor_logins.sh
+    sudo chmod +x /home/vagrant/monitor_disk.sh
+    sudo chmod +x /home/vagrant/monitor_services.sh
 
+    # Ensure cron service is running
+    sudo systemctl enable cron
+    sudo systemctl start cron
+
+    # Set up crontab for all scripts (append, don't overwrite)
+    (crontab -l 2>/dev/null; echo "*/5 * * * * /home/vagrant/monitor_logins.sh") | crontab -
+    (crontab -l 2>/dev/null; echo "*/5 * * * * /home/vagrant/monitor_disk.sh") | crontab -
+    (crontab -l 2>/dev/null; echo "*/5 * * * * /home/vagrant/monitor_services.sh") | crontab -
+  SHELL
+  
   config.vm.provision "shell", inline: <<-SHELL
     sudo useradd -m newuser
     echo "newuser:password" | sudo chpasswd
