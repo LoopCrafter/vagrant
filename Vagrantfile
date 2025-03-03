@@ -72,10 +72,16 @@ Vagrant.configure("2") do |config|
   # documentation for more information about their specific syntax and use.
   config.vm.provision "file", source: "monitor_logins.sh", destination: "/home/vagrant/monitor_logins.sh"
   config.vm.provision "shell", inline: <<-SHELL
-    echo "*/5 * * * * /home/vagrant/monitor_logins.sh" | crontab -
+  echo "*/5 * * * * /home/vagrant/monitor_logins.sh" | crontab -
+  service cron start
+  SHELL
+
+  config.vm.provision "file", source: "monitor_disk.sh", destination: "/home/vagrant/monitor_disk.sh"
+  config.vm.provision "shell", inline: <<-SHELL
+    echo "*/5 * * * * /home/vagrant/monitor_disk.sh" | crontab -
     service cron start
   SHELL
-  
+
   config.vm.provision "shell", inline: <<-SHELL
     sudo useradd -m newuser
     echo "newuser:password" | sudo chpasswd
